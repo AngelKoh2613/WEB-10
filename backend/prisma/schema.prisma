@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  events       Event[]
+  tombstones   EventTombstone[]
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  category                String
+  priority                String
+  recurrenceFrequency     String?
+  recurrenceInterval      Int       @default(1)
+  recurrenceWeekdays      Int[]     @default([])
+  recurrenceUntil         DateTime?
+  recurrenceCount         Int?
+  recurrenceOffsetMinutes Int?
+  version                 Int       @default(1)
+  reminderMinutes         Int?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exceptions              EventException[]
+
+  @@index([userId, startsAt])
+}
+
+model EventException {
+  id            String   @id @default(uuid())
+  eventId       String
+  originalStart DateTime
+  excluded      Boolean
+  title         String?
+  description   String?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  category      String?
+  priority      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, originalStart])
+  @@index([eventId])
+}
+
+model EventTombstone {
+  id        String   @id
+  userId    String
+  version   Int
+  deletedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
